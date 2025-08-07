@@ -28,37 +28,42 @@ typedef unsigned char byte;
 extern DDC264EVM_IO_API int nDDC264EVM_IO;
 
 
-int __stdcall ReadDeviceDescriptors(int *USBdevCount, int *bLengthPass, int *bDescriptorTypePass,
+DDC264EVM_IO_API int __stdcall ReadDeviceDescriptors(int *USBdevCount, int *bLengthPass, int *bDescriptorTypePass,
                                     long *bcdUSBPass, int *bDeviceClass, int *bDeviceSubClass,
                                     int *bDeviceProtocol, int *bMaxPacketSize0, long *idVendor,
                                     long *idProduct, long *bcdDevice, int *iManufacturer,
                                     int *iProduct, int *iSerialNumber, int *bNumConfigurations);
 
-int __stdcall ReadInterfaceDescriptors(	int *USBdev, int *bLengthPass, int *bDescriptorTypePass,
+DDC264EVM_IO_API int __stdcall ReadInterfaceDescriptors(	int *USBdev, int *bLengthPass, int *bDescriptorTypePass,
                                         int *bInterfaceNumberPass, int *bAlternateSettingPass, short *bNumEndpointsPass,
                                         int *bInterfaceClassPass, int *bInterfaceSubClassPass, int *bInterfaceProtocolPass,
                                         int *iInterfacePass);
 
-int __stdcall XferDataOut(int* USBdev, unsigned char* Data, long* DataLength);
+DDC264EVM_IO_API int __stdcall XferDataOut(int* USBdev, unsigned char* Data, long* DataLength);
 
-int __stdcall XferDataIn(int* USBdev, unsigned char* Data, long* DataLength);
+DDC264EVM_IO_API int __stdcall XferDataIn(int* USBdev, unsigned char* Data, long* DataLength);
 
 // =============================================================================================================
 
-void __stdcall dllID(char* text, int bufsize); // Return simple dll ID string
+DDC264EVM_IO_API void __stdcall dllID(char* text, int bufsize); // Return simple dll ID string
 
-void __stdcall dllCprght(char* text, int bufsize); // Return simple dll ID string
+DDC264EVM_IO_API void __stdcall dllCprght(char* text, int bufsize); // Return simple dll ID string
 
-int __stdcall EVM_RegDataOut(int* USBdev, int* Reg, int* Data);
+DDC264EVM_IO_API int __stdcall EVM_RegDataOut(int* USBdev, int* Reg, int* Data);
 
-bool  __stdcall EVM_ResetDDC(int* USBdev);
+DDC264EVM_IO_API bool  __stdcall EVM_ResetDDC(int* USBdev);
 
-bool  __stdcall EVM_ClearTriggers(int* USBdev);
+DDC264EVM_IO_API bool  __stdcall EVM_ClearTriggers(int* USBdev);
 
-bool  __stdcall EVM_DataSequence(int* USBdev, byte* CFGHIGH, byte* CFGLOW);
+DDC264EVM_IO_API bool  __stdcall EVM_DataSequence(int* USBdev, byte* CFGHIGH, byte* CFGLOW);
 
-int __stdcall EVM_RegNameTable(int RegN, char* buf, int bufsize);
+DDC264EVM_IO_API int __stdcall EVM_RegNameTable(int RegN, char* buf, int bufsize);
 
-long __stdcall EVM_RegsTransfer(int* USBdev, int* RegsIn, int* RegEnable, int* RegsOut = nullptr);
+DDC264EVM_IO_API long __stdcall EVM_RegsTransfer(int* USBdev, int* RegsIn, int* RegEnable, int* RegsOut = nullptr);
 
-long __stdcall EVM_DataCap(int* USBdev, int Channels, int nDVALIDReads, int* DataArray, int* AllDataAorBfirst);
+DDC264EVM_IO_API long __stdcall EVM_DataCap(int* USBdev, int Channels, int nDVALIDReads, int* DataArray, int* AllDataAorBfirst);
+
+// Enhanced CFG register operations based on VB6 implementation
+DDC264EVM_IO_API long __stdcall EVM_WriteCFGFast(int* USBdev, byte* CFGHIGH, byte* CFGLOW, int* VerifyResults = nullptr);
+
+DDC264EVM_IO_API bool __stdcall EVM_ReadCFGRegister(int* USBdev, byte* ReadCFGHIGH, byte* ReadCFGLOW);

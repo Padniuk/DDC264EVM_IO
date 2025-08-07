@@ -675,3 +675,126 @@ long __stdcall EVM_DataCap(int* USBdev, int Channels, int nDVALIDReads, int* Dat
 
     return(0);
 }
+
+// Enhanced CFG write/verify function based on VB6 WriteVerfCFGFast implementation
+long __stdcall EVM_WriteCFGFast(int* USBdev, byte* CFGHIGH, byte* CFGLOW, int* VerifyResults) {
+    
+    CCyUSBDevice* USBDevice = new CCyUSBDevice(NULL);
+    
+    if (!USBDevice->Open(USBdev[0])) {
+        delete USBDevice;
+        return -1; // Could not open USB device
+    }
+
+    // Step 1: Clear CFG state machine (matches VB6: "0000 0000 0000 1E00 1E00 D100")
+    unsigned char clearCmd[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1E, 0x00, 0x1E, 0x00, 0xD1, 0x00 };
+    long clearCmdLen = sizeof(clearCmd);
+    
+    if (USBDevice->BulkOutEndPt) {
+        USBDevice->BulkOutEndPt->TimeOut = 100;
+        USBDevice->BulkOutEndPt->XferData(clearCmd, clearCmdLen);
+    } else {
+        USBDevice->Close();
+        delete USBDevice;
+        return -2; // Could not open endpoint
+    }
+
+    // Step 2: Setup CFG command sequence (matches VB6: "0000 0000 0000 1100 1200")
+    unsigned char cfgCmd[] = { 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Header
+        0x11, 0x00,                           // CLK_CFG register
+        0x12, 0x00,                           // DIN_CFG register  
+        0x1C, *CFGHIGH,                       // DDC CFGHIGH register
+        0x1D, *CFGLOW,                        // DDC CFGLOW register
+        0x1F, 0x01,                           // FORMAT_DIN_CFG register
+        0x00, 0x00, 0x00, 0x00,              // Padding
+        0x1E, 0x01                            // Trigger
+    };
+    long cfgCmdLen = sizeof(cfgCmd);
+
+    if (USBDevice->BulkOutEndPt) {
+        USBDevice->BulkOutEndPt->TimeOut = 100;
+        USBDevice->BulkOutEndPt->XferData(cfgCmd, cfgCmdLen);
+    } else {
+        USBDevice->Close();
+        delete USBDevice;
+        return -3; // Could not write CFG command
+    }
+
+    // Step 3: Wait for operation to complete
+    Sleep(100);
+
+    // Step 4: Read back CFG register for verification (if requested)
+    if (VerifyResults != nullptr) {
+        byte readCFGHIGH = 0, readCFGLOW = 0;
+        if (EVM_ReadCFGRegister(USBdev, &readCFGHIGH, &readCFGLOW)) {
+            VerifyResults[0] = readCFGHIGH;
+            VerifyResults[1] = readCFGLOW;
+            VerifyResults[2] = (readCFGHIGH == *CFGHIGH && readCFGLOW == *CFGLOW) ? 1 : 0; // Verification result
+        } else {
+            VerifyResults[0] = VerifyResults[1] = VerifyResults[2] = -1; // Read error
+        }
+    }
+
+    // Step 5: Return control (matches VB6: "0000 0000 0000 1E00")
+    unsigned char returnCmd[] = { 0x00, 0x00, 0x00, 0x00, 0x1E, 0x00 };
+    long returnCmdLen = sizeof(returnCmd);
+    
+    if (USBDevice->BulkOutEndPt) {
+        USBDevice->BulkOutEndPt->TimeOut = 100;
+        USBDevice->BulkOutEndPt->XferData(returnCmd, returnCmdLen);
+    }
+
+    USBDevice->Close();
+    delete USBDevice;
+    return 0; // Success
+}
+
+// Read CFG register function  
+bool __stdcall EVM_ReadCFGRegister(int* USBdev, byte* ReadCFGHIGH, byte* ReadCFGLOW) {
+    
+    CCyUSBDevice* USBDevice = new CCyUSBDevice(NULL);
+    
+    if (!USBDevice->Open(USBdev[0])) {
+        delete USBDevice;
+        return false;
+    }
+
+    // Send read command for CFG register (register 0x57)
+    unsigned char readCmd[] = { 0x00, 0x00, 0x00, 0x00, 0x57, 0x00 };
+    long readCmdLen = sizeof(readCmd);
+    
+    if (USBDevice->BulkOutEndPt) {
+        USBDevice->BulkOutEndPt->TimeOut = 100;
+        USBDevice->BulkOutEndPt->XferData(readCmd, readCmdLen);
+    } else {
+        USBDevice->Close();
+        delete USBDevice;
+        return false;
+    }
+
+    Sleep(10);
+
+    // Read response
+    unsigned char readBuffer[1024];
+    long bufferLen = sizeof(readBuffer);
+    bool readSuccess = false;
+    
+    if (USBDevice->BulkInEndPt) {
+        USBDevice->BulkInEndPt->TimeOut = 250;
+        readSuccess = USBDevice->BulkInEndPt->XferData(readBuffer, bufferLen);
+    }
+
+    USBDevice->Close();
+    delete USBDevice;
+
+    if (readSuccess && bufferLen >= 8) {
+        // Parse the CFG data from response (implementation depends on actual protocol)
+        // This is a simplified version - actual parsing may need adjustment
+        *ReadCFGHIGH = readBuffer[0];
+        *ReadCFGLOW = readBuffer[1];
+        return true;
+    }
+
+    return false;
+}

@@ -102,27 +102,57 @@ After the correct installation and enumeration, the program can read the value o
 
 ## Main methods exported in the DLL
 ```cpp
-// Returns simple dll version string
-void __stdcall dllID(char* text, int bufsize);
+// USB device descriptor functions
+int __stdcall ReadDeviceDescriptors(int* USBdevCount, int* bLengthPass, int* bDescriptorTypePass,
+                                    long* bcdUSBPass, int* bDeviceClass, int* bDeviceSubClass,
+                                    int* bDeviceProtocol, int* bMaxPacketSize0, long* idVendor,
+                                    long* idProduct, long* bcdDevice, int* iManufacturer,
+                                    int* iProduct, int* iSerialNumber, int* bNumConfigurations);
 
-// Allows writing a value to a register
-int __stdcall EVM_RegDataOut(int* USBdev, int* Reg, int* Data);
+int __stdcall ReadInterfaceDescriptors(int* USBdev, int* bLengthPass, int* bDescriptorTypePass,
+                                       int* bInterfaceNumberPass, int* bAlternateSettingPass, short* bNumEndpointsPass,
+                                       int* bInterfaceClassPass, int* bInterfaceSubClassPass, int* bInterfaceProtocolPass,
+                                       int* iInterfacePass);
 
-// Resets the DDC at the EVM
-bool  __stdcall EVM_ResetDDC(int* USBdev);
+// USB data transfer functions
+int __stdcall XferDataOut(int* USBdev, unsigned char* Data, long* DataLength);
+int __stdcall XferDataIn(int* USBdev, unsigned char* Data, long* DataLength);
 
-// Clear triggers register
-bool  __stdcall EVM_ClearTriggers(int* USBdev);
+// DLL information functions
+void __stdcall dllID(char* text, int bufsize);        // Returns dll version string
+void __stdcall dllCprght(char* text, int bufsize);    // Returns dll copyright string
 
-// Prepare the DDC for acquire data
-bool  __stdcall EVM_DataSequence(int* USBdev, byte* CFGHIGH, byte* CFGLOW);
+// EVM control functions
+int __stdcall EVM_RegDataOut(int* USBdev, int* Reg, int* Data);           // Write value to register
+bool __stdcall EVM_ResetDDC(int* USBdev);                                // Reset the DDC devices
+bool __stdcall EVM_ClearTriggers(int* USBdev);                           // Clear triggers register
+bool __stdcall EVM_DataSequence(int* USBdev, byte* CFGHIGH, byte* CFGLOW); // Prepare DDC for data acquisition
 
-// Get the register name
-int __stdcall EVM_RegNameTable(int RegN, char* buf, int bufsize);
+// Enhanced CFG register operations
+long __stdcall EVM_WriteCFGFast(int* USBdev, byte* CFGHIGH, byte* CFGLOW, int* VerifyResults = nullptr);
+bool __stdcall EVM_ReadCFGRegister(int* USBdev, byte* ReadCFGHIGH, byte* ReadCFGLOW);
 
-// Get and Set data to board registers
-long __stdcall EVM_RegsTransfer(int* USBdev, long* RegsIn, long* RegEnable, long* RegsOut = nullptr);
+// Utility functions
+int __stdcall EVM_RegNameTable(int RegN, char* buf, int bufsize);         // Get register name string
+long __stdcall EVM_RegsTransfer(int* USBdev, int* RegsIn, int* RegEnable, int* RegsOut = nullptr); // Bulk register operations
 
-// Capture a block of data
-long __stdcall EVM_DataCap(int* USBdev, long Channels, long nDVALIDReads, double* DataArray, long* AllDataAorBfirst);
+// Data acquisition function
+long __stdcall EVM_DataCap(int* USBdev, int Channels, int nDVALIDReads, int* DataArray, int* AllDataAorBfirst);
 ```
+
+## Typical EVM Operation Sequences
+
+### Reset and Initialization Sequence
+For proper EVM operation, follow this initialization sequence:
+
+1. **Reset DDC devices**: `EVM_ResetDDC()` - Performs a soft reset of all DDC264 devices
+2. **Clear triggers**: `EVM_ClearTriggers()` - Ensures the CFG state machine is reset
+3. **Configure DDC**: `EVM_DataSequence()` or `EVM_WriteCFGFast()` - Sets up DDC configuration registers
+4. **Data acquisition**: `EVM_DataCap()` - Captures data from the configured channels
+
+### CFG Register Configuration
+The DDC264 devices require proper configuration through CFG registers (CFGHIGH and CFGLOW):
+
+- **Standard method**: `EVM_DataSequence(USBdev, &CFGHIGH, &CFGLOW)` - Basic configuration setup
+- **Enhanced method**: `EVM_WriteCFGFast(USBdev, &CFGHIGH, &CFGLOW, VerifyResults)` - Fast configuration with optional verification
+- **Read back**: `EVM_ReadCFGRegister(USBdev, &ReadCFGHIGH, &ReadCFGLOW)` - Verify current CFG register values

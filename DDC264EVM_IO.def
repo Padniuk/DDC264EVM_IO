@@ -13,3 +13,5 @@ EVM_DataSequence
 EVM_RegNameTable
 EVM_RegsTransfer
 EVM_DataCap
+EVM_WriteCFGFast
+EVM_ReadCFGRegister

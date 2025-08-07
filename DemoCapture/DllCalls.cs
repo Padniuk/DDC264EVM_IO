@@ -56,4 +56,11 @@ partial class Program
     [DllImport(dllFile, CallingConvention = CallingConvention.StdCall)]
     public static extern int EVM_DataCap(ref int USBdev, int Channels, int Samples, ref int AllData, ref int AllDataAorBfirst);
 
+    // Enhanced CFG register operations based on VB6 implementation
+    [DllImport(dllFile, CallingConvention = CallingConvention.StdCall)]
+    public static extern int EVM_WriteCFGFast(ref int USBdev, ref byte CFGHIGH, ref byte CFGLOW, ref int VerifyResults);
+
+    [DllImport(dllFile, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool EVM_ReadCFGRegister(ref int USBdev, ref byte ReadCFGHIGH, ref byte ReadCFGLOW);
+
 }

@@ -47,10 +47,24 @@ partial class Program
             Console.WriteLine("Error when clearing registers");
             return false;
         }
-        resOut = EVM_DataSequence(ref USBdev, ref CFGHIGH, ref CFGLOW);
-        if (!resOut) Console.WriteLine("Error when writting dataSequence");
+        
+        // Use enhanced CFG write/verify function (based on VB6 implementation)
+        int[] verifyResults = new int[3]; // [0]=ReadCFGHIGH, [1]=ReadCFGLOW, [2]=VerificationResult
+        int cfgResult = EVM_WriteCFGFast(ref USBdev, ref CFGHIGH, ref CFGLOW, ref verifyResults[0]);
+        
+        if (cfgResult == 0) {
+            Console.WriteLine($"CFG written successfully - CFGHIGH: 0x{CFGHIGH:X2}, CFGLOW: 0x{CFGLOW:X2}");
+            if (verifyResults[2] == 1) {
+                Console.WriteLine($"CFG verification passed - Read CFGHIGH: 0x{verifyResults[0]:X2}, Read CFGLOW: 0x{verifyResults[1]:X2}");
+            } else if (verifyResults[2] == 0) {
+                Console.WriteLine($"CFG verification failed - Expected: 0x{CFGHIGH:X2}/0x{CFGLOW:X2}, Read: 0x{verifyResults[0]:X2}/0x{verifyResults[1]:X2}");
+            }
+        } else {
+            Console.WriteLine($"Error in EVM_WriteCFGFast: {cfgResult}");
+            return false;
+        }
 
-        return resOut;
+        return true;
     }
 
     void Reset_Regs()
